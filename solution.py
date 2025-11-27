@@ -9,7 +9,6 @@ class Node:
         self.bias = np.random.normal(loc=0.5, scale=0.01)
     
     def compute(self, input_data):
-        """Izračunava weighted sum za ovaj neuron."""
         return np.dot(self.weights, input_data) + self.bias
 
 
@@ -21,7 +20,6 @@ class Layer:
         #self.biases_extracted = [node.bias for node in self.nodes]
     
     def forward(self, input_data, activation_fn):
-        """Prolazi input kroz sve neurone u sloju i primjenjuje aktivaciju."""
         outputs = np.array([node.compute(input_data) for node in self.nodes])
         return activation_fn(outputs)
 
@@ -59,28 +57,13 @@ class NeuralNet:
      
     @staticmethod
     def sigmoid(x):
-        """Sigmoidalna aktivacijska funkcija (numerički stabilna)."""
         return 1 / (1 + np.exp(-np.clip(x, -500, 500)))
      
     def feed_forward(self, input_row):
-        """
-        Propagira input kroz mrežu.
-        
-        Args:
-            input_row: NumPy array ulaznih vrijednosti
-        
-        Returns:
-            Skalarna vrijednost output neurona
-        """
         activation = np.array(input_row)
-        
-        # Propagacija kroz hidden layers
-        for i, layer in enumerate(self.layers):            
+        for i, layer in enumerate(self.layers):
             activation = layer.forward(activation, self.sigmoid)
-        
-        # Output layer (bez aktivacije ili s linearnom)
-        output = self.output_layer.forward(activation, lambda x: x)  # Linearna aktivacija
-        
+        output = self.output_layer.forward(activation, lambda x: x)
         return float(output)
     
     def error(self, calculated_output, output_data):
@@ -95,12 +78,7 @@ def read_csv_file(csv_file):
         return dataset
 
 
-# Funkcija za roulette wheel selection
 def roulette_wheel_selection(population, total_fitness):
-    """
-    Odabira jednu jedinku koristeći roulette wheel metodu.
-    Veći fitness = veća šansa za odabir.
-    """
     pick = np.random.uniform(0, total_fitness)
     current_sum = 0
     for individual in population:
@@ -113,7 +91,7 @@ def mutate(neural_net, mutation_probability, mutation_scale):
     # Hidden layers
     for layer in neural_net.layers:
         for node in layer.nodes:
-            for i in range(len(node.weights)):  # ← Koristi indeks
+            for i in range(len(node.weights)):
                 if np.random.random() < mutation_probability:
                     node.weights[i] += np.random.normal(0.0, mutation_scale)
             if np.random.random() < mutation_probability:
@@ -129,10 +107,8 @@ def mutate(neural_net, mutation_probability, mutation_scale):
 
           
 def genetic_algorithm(num_layers, layer_size, input_size, input_data, output_data, population_size, elitism, mutation_probability, mutation_scale, num_iterations, test_input, test_output):
-    # Početna populacija
     population = [NeuralNet(num_layers, layer_size, input_size, input_data, output_data) for _ in range(population_size)]
     
-    # Evaluiraj početnu populaciju
     for neural_net in population:
         calculated_output = np.array([neural_net.feed_forward(row) for row in input_data])
         error = neural_net.error(calculated_output,output_data)
@@ -144,14 +120,12 @@ def genetic_algorithm(num_layers, layer_size, input_size, input_data, output_dat
     while done_iterations < num_iterations:
         new_population = []
         
-        # Elitizam - kopiraj najbolje (već imaju fitness!)
         new_population.extend(population[:elitism])
         
         if (done_iterations + 1) % 2000 == 0:
             error = population[0].error(np.array([population[0].feed_forward(row) for row in input_data]), output_data)
             print(f"[Train error @{done_iterations+1}]: {error:.6f}")
         
-        # Generiraj djecu
         total_fitness = sum(nn.fitness for nn in population)
         while len(new_population) < population_size:
             parent1 = roulette_wheel_selection(population, total_fitness)
@@ -170,21 +144,17 @@ def genetic_algorithm(num_layers, layer_size, input_size, input_data, output_dat
                 child_node.weights = (parent1.output_layer.nodes[j].weights + parent2.output_layer.nodes[j].weights) / 2
                 child_node.bias = (parent1.output_layer.nodes[j].bias + parent2.output_layer.nodes[j].bias) / 2
             
-            # Mutacija
             mutate(child, mutation_probability, mutation_scale)
             
             new_population.append(child)
         
-        # P = P' (zamijeni populaciju)
         population = new_population
         
-        # evaluiraj(P) - evaluiraj SAMO NOVU djecu (ne elite!)
-        for i in range(elitism, len(population)):  # ← Preskoči elite!
+        for i in range(elitism, len(population)):
             calculated_output = np.array([population[i].feed_forward(row) for row in input_data])
             error = population[i].error(calculated_output,output_data)
             population[i].fitness = 1/error
         
-        # Sortiraj za sljedeću iteraciju
         population.sort(key=lambda nn: nn.fitness, reverse=True)
         
         done_iterations += 1
@@ -235,4 +205,3 @@ if __name__ == "__main__":
     layer_size = layer_sizes[0]
     
     genetic_algorithm(num_layers, layer_size, len(input_data[0]), input_data, output_data, int(popsize), int(elitism), float(mutation_prob), float(mutation_scale), int(num_of_iterations), test_input, test_output)
-    
