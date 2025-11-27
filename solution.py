@@ -1,3 +1,4 @@
+import argparse
 import csv
 import sys
 import numpy as np
@@ -161,47 +162,37 @@ def genetic_algorithm(num_layers, layer_size, input_size, input_data, output_dat
     error = population[0].error(np.array([population[0].feed_forward(row) for row in test_input]), test_output)
     print(f"[Test error]:: {error:.6f}")
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Genetski trenirana neuronska mreža")
+
+    parser.add_argument("--train", required=True, help="Putanja do train CSV datoteke")
+    parser.add_argument("--test", required=True, help="Putanja do test CSV datoteke")
+    parser.add_argument("--nn", required=True, help="Arhitektura mreže, npr. '5s10s3'")
+    parser.add_argument("--popsize", type=int, required=True)
+    parser.add_argument("--elitism", type=int, required=True)
+    parser.add_argument("--p", type=float, required=True, help="Mutation probability")
+    parser.add_argument("--K", type=float, required=True, help="Mutation scale")
+    parser.add_argument("--iter", type=int, required=True)
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    train_data = ''
-    test_data = ''
-    architecture = ''
-    popsize = ''
-    elitism = ''
-    mutation_prob = ''
-    mutation_scale = ''
-    num_of_iterations = ''
-    for i in range(len(args)):
-        if args[i] == '--train':
-            train_data = read_csv_file(args[i+1])
-        elif args[i] == '--test':
-            test_data = read_csv_file(args[i+1])
-        elif args[i] == '--nn':
-            architecture = args[i+1]
-        elif args[i] == '--popsize':
-            popsize = args[i+1]
-        elif args[i] == '--elitism':
-            elitism = args[i+1]
-        elif args[i] == '--p':
-            mutation_prob = args[i+1]
-        elif args[i] == '--K':
-            mutation_scale = args[i+1]
-        elif args[i] == '--iter':
-            num_of_iterations = args[i+1]
-    
-    
-    input_data=np.array([row[:-1] for row in train_data[1:]],dtype=float)
-    output_data=np.array([row[-1] for row in train_data[1:]],dtype=float)
-    test_input=np.array([row[:-1] for row in test_data[1:]],dtype=float)
-    test_output=np.array([row[-1] for row in test_data[1:]],dtype=float)
-    #nn = NeuralNet(num_layers=2, layer_size=5, input_size=len(input_data[0]), input_data=input_data, output_data=output_data)
-    #calculated_output = np.array([nn.feed_forward(row) for row in input_data])
-    
-    #error = nn.error(calculated_output)
-    #print(f"Mean Squared Error: {error}")
-    parts = architecture.strip().split('s')
-    layer_sizes = [int(part) for part in parts if part]
+    args = parse_args()
+
+    train_data = read_csv_file(args.train)
+    test_data  = read_csv_file(args.test)
+
+    input_data  = np.array([row[:-1] for row in train_data[1:]], dtype=float)
+    output_data = np.array([row[-1]  for row in train_data[1:]], dtype=float)
+
+    test_input  = np.array([row[:-1] for row in test_data[1:]], dtype=float)
+    test_output = np.array([row[-1]  for row in test_data[1:]], dtype=float)
+
+    # arhitektura "5s10s3" → [5, 10, 3]
+    layer_sizes = [int(x) for x in args.nn.split("s") if x]
+
     num_layers = len(layer_sizes)
     layer_size = layer_sizes[0]
     
-    genetic_algorithm(num_layers, layer_size, len(input_data[0]), input_data, output_data, int(popsize), int(elitism), float(mutation_prob), float(mutation_scale), int(num_of_iterations), test_input, test_output)
+    genetic_algorithm(num_layers, layer_size, len(input_data[0]), input_data, output_data, args.popsize, args.elitism, args.p, args.K, args.iter, test_input, test_output)
